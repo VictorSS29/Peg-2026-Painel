@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel PEG 2026 · Estácio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#14181c; --panel:#1c2127; --panel-2:#20262d; --line:#2a3138; --line-soft:#242a31;
+    --text:#edeff2; --muted:#8b95a1; --muted-2:#5f6b78;
+    --teal:#2dd4a7; --teal-dim:rgba(45,212,167,.14);
+    --amber:#e8a93b; --amber-dim:rgba(232,169,59,.14);
+    --rust:#e2593b; --rust-dim:rgba(226,89,59,.14);
+    --blue:#4a9eff; --blue-dim:rgba(74,158,255,.14);
+    --radius:10px;
+  }
+  *{box-sizing:border-box;} html,body{margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+  h1,h2,h3{font-family:'Space Grotesk',sans-serif;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  .wrap{max-width:1180px;margin:0 auto;padding:24px 20px 80px;}
+  .hidden{display:none !important;}
+
+  /* ---------- Login ---------- */
+  #loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .login-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:32px 28px;width:100%;max-width:360px;}
+  .login-card h2{margin:0 0 4px;font-size:20px;}
+  .login-card p{color:var(--muted);font-size:13px;margin:0 0 20px;}
+  .login-card label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;display:block;margin:14px 0 6px;}
+  .login-card input{width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:10px 12px;font-family:'Inter';font-size:14px;outline:none;}
+  .login-card input:focus{border-color:var(--blue);}
+  .login-card button{width:100%;margin-top:20px;background:var(--teal);color:#0b1210;border:none;border-radius:8px;padding:11px;font-weight:700;font-size:14px;cursor:pointer;font-family:'Inter';}
+  .login-card button:hover{opacity:.9;}
+  .login-err{color:var(--rust);font-size:12.5px;margin-top:10px;min-height:16px;}
+  .login-eyebrow{font-family:'JetBrains Mono';font-size:11px;letter-spacing:.14em;color:var(--teal);text-transform:uppercase;margin-bottom:10px;}
+
+  .topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap;margin-bottom:18px;}
+  .eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--pillar-color,var(--teal));text-transform:uppercase;margin-bottom:8px;display:flex;gap:10px;align-items:center;}
+  .user-chip{background:var(--panel-2);border:1px solid var(--line);color:var(--muted);padding:2px 9px;border-radius:20px;font-size:10.5px;text-transform:none;letter-spacing:0;}
+  .logout-btn{background:none;border:1px solid var(--line);color:var(--muted-2);padding:2px 9px;border-radius:20px;font-size:10.5px;cursor:pointer;font-family:'Inter';}
+  .logout-btn:hover{color:var(--rust);border-color:var(--rust);}
+  h1{font-size:26px;font-weight:600;margin:0 0 6px;letter-spacing:-.01em;}
+  .subtitle{color:var(--muted);font-size:13.5px;max-width:560px;line-height:1.5;}
+  .unidade-row{display:flex;gap:8px;align-items:center;margin-top:12px;}
+  .unidade-select{background:var(--panel);border:1px solid var(--blue);color:var(--blue);font-weight:600;padding:7px 12px;border-radius:8px;font-size:13px;font-family:'Inter';outline:none;cursor:pointer;}
+  .gauge-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 20px;display:flex;align-items:center;gap:16px;min-width:240px;}
+  .gauge-num{font-family:'Space Grotesk';font-size:24px;font-weight:700;}
+  .gauge-label{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em;}
+
+  .pillar-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
+  .pillar-tab{background:var(--panel);border:1px solid var(--line);color:var(--muted);padding:9px 16px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all .15s;}
+  .pillar-tab .dot{width:8px;height:8px;border-radius:50%;background:var(--muted-2);flex-shrink:0;}
+  .pillar-tab:hover{border-color:var(--muted-2);color:var(--text);}
+  .pillar-tab.active{background:var(--tab-color-dim);border-color:var(--tab-color);color:var(--tab-color);}
+  .pillar-tab.active .dot{background:var(--tab-color);}
+  .pillar-tab .pct{font-family:'JetBrains Mono';font-size:11px;opacity:.75;}
+
+  .status-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:11px 14px;}
+  .stat .n{font-family:'Space Grotesk';font-size:20px;font-weight:700;}
+  .stat .l{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-top:2px;}
+  .stat.s1 .n{color:var(--teal);} .stat.s2 .n{color:var(--amber);} .stat.s3 .n{color:var(--rust);} .stat.s0 .n{color:var(--muted-2);}
+
+  .alerts{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin-bottom:18px;}
+  .alerts h3{margin:0 0 10px;font-size:12.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;}
+  .alert-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--line-soft);font-size:13px;}
+  .alert-item:first-of-type{border-top:none;}
+  .alert-pillar{color:var(--muted-2);font-size:11px;margin-right:6px;}
+  .alert-days{font-family:'JetBrains Mono';font-size:11.5px;padding:3px 9px;border-radius:20px;font-weight:700;flex-shrink:0;}
+  .alert-days.soon{background:var(--rust-dim);color:var(--rust);}
+  .alert-days.mid{background:var(--amber-dim);color:var(--amber);}
+  .alert-days.far{background:var(--blue-dim);color:var(--blue);}
+
+  .toolbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;}
+  .tab{background:var(--panel);border:1px solid var(--line);color:var(--muted);padding:7px 13px;border-radius:20px;font-size:12.5px;cursor:pointer;transition:all .15s;}
+  .tab:hover{border-color:var(--muted-2);color:var(--text);}
+  .tab.active{background:var(--teal-dim);border-color:var(--teal);color:var(--teal);}
+  .search{margin-left:auto;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:7px 14px;color:var(--text);font-size:13px;min-width:200px;outline:none;font-family:'Inter';}
+  .search::placeholder{color:var(--muted-2);}
+
+  .grid{display:flex;flex-direction:column;gap:10px;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;}
+  .card-head{display:flex;align-items:center;gap:14px;padding:14px 16px;cursor:pointer;}
+  .num-badge{font-family:'JetBrains Mono';font-size:12px;color:var(--muted);background:var(--panel-2);border:1px solid var(--line);border-radius:6px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .card-titles{flex:1;min-width:0;}
+  .card-title{font-size:14px;font-weight:600;margin-bottom:4px;}
+  .tag-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+  .tag{font-size:10.5px;padding:2px 8px;border-radius:20px;color:var(--muted);border:1px solid var(--line);text-transform:uppercase;letter-spacing:.03em;}
+  .tag.cat-proc{color:var(--blue);border-color:rgba(74,158,255,.35);}
+  .tag.cat-res{color:#c58bff;border-color:rgba(197,139,255,.35);}
+  .tag.pts{color:var(--teal);border-color:rgba(45,212,167,.4);font-family:'JetBrains Mono';}
+  .chevron{color:var(--muted-2);transition:transform .2s;flex-shrink:0;}
+  .card.open .chevron{transform:rotate(180deg);}
+
+  .ruler-wrap{padding:0 16px 14px;}
+  .ruler{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;}
+  .ruler-seg{padding:7px 4px;text-align:center;font-size:10.5px;font-weight:600;border-radius:5px;cursor:pointer;border:1px solid var(--line);color:var(--muted-2);background:var(--panel-2);text-transform:uppercase;letter-spacing:.03em;transition:all .12s;line-height:1.5;}
+  .ruler-seg .pv{display:block;font-family:'JetBrains Mono';font-size:9.5px;opacity:.8;}
+  .ruler-seg:hover{border-color:var(--muted-2);color:var(--text);}
+  .ruler-seg.sel-0{background:var(--line-soft);color:var(--muted);border-color:var(--muted-2);}
+  .ruler-seg.sel-3{background:var(--rust-dim);color:var(--rust);border-color:var(--rust);}
+  .ruler-seg.sel-2{background:var(--amber-dim);color:var(--amber);border-color:var(--amber);}
+  .ruler-seg.sel-1{background:var(--teal-dim);color:var(--teal);border-color:var(--teal);}
+
+  .details{border-top:1px solid var(--line-soft);padding:16px;display:none;background:var(--panel-2);}
+  .card.open .details{display:block;}
+  .detail-block{margin-bottom:14px;} .detail-block:last-child{margin-bottom:0;}
+  .detail-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;font-weight:600;}
+  .detail-text{font-size:13px;color:var(--text);line-height:1.55;}
+  .regua-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+  .regua-box{background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:9px 10px;font-size:12px;line-height:1.45;}
+  .regua-box .rlabel{font-family:'JetBrains Mono';font-size:10.5px;font-weight:700;margin-bottom:4px;display:flex;justify-content:space-between;}
+  .regua-box.r1 .rlabel{color:var(--teal);} .regua-box.r2 .rlabel{color:var(--amber);} .regua-box.r3 .rlabel{color:var(--rust);}
+  ul.tips{margin:0;padding-left:18px;font-size:12.5px;line-height:1.6;color:var(--text);}
+  ul.tips li{margin-bottom:3px;}
+  textarea{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:7px;color:var(--text);padding:9px 11px;font-family:'Inter';font-size:12.5px;line-height:1.5;resize:vertical;min-height:56px;outline:none;}
+  textarea:focus{border-color:var(--blue);}
+  .meta-row{display:flex;gap:18px;flex-wrap:wrap;font-size:11.5px;color:var(--muted-2);margin-top:10px;}
+  .meta-row span b{color:var(--muted);}
+  .score-badge{font-family:'JetBrains Mono';font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px;background:var(--teal-dim);color:var(--teal);}
+
+  /* Evidence upload */
+  .evidence-box{border:1.5px dashed var(--line);border-radius:8px;padding:12px;text-align:center;}
+  .evidence-box.has-file{border-style:solid;border-color:var(--teal);}
+  .evidence-preview{display:flex;align-items:center;gap:10px;text-align:left;}
+  .evidence-thumb{width:52px;height:52px;border-radius:6px;object-fit:cover;background:var(--panel);flex-shrink:0;border:1px solid var(--line);}
+  .evidence-info{flex:1;min-width:0;font-size:12px;}
+  .evidence-info a{color:var(--blue);text-decoration:none;}
+  .evidence-info a:hover{text-decoration:underline;}
+  .evidence-meta{color:var(--muted-2);font-size:11px;margin-top:2px;}
+  .evidence-actions{display:flex;gap:6px;}
+  .btn-mini{background:var(--panel);border:1px solid var(--line);color:var(--muted);padding:5px 10px;border-radius:6px;font-size:11.5px;cursor:pointer;font-family:'Inter';}
+  .btn-mini:hover{color:var(--text);border-color:var(--muted-2);}
+  .btn-mini.danger:hover{color:var(--rust);border-color:var(--rust);}
+  .file-input-label{display:inline-block;background:var(--teal-dim);color:var(--teal);border:1px solid var(--teal);padding:7px 14px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;}
+  .file-input-label input{display:none;}
+  .upload-status{font-size:11.5px;color:var(--muted);margin-top:8px;}
+
+  footer{margin-top:30px;text-align:center;color:var(--muted-2);font-size:11.5px;}
+  @media(max-width:640px){.status-row{grid-template-columns:repeat(2,1fr);} .regua-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-eyebrow">PEG 2026 · Estácio</div>
+    <h2>Painel Eficiência PEG</h2>
+    <p>Entre com o e-mail e senha cadastrados pela sua unidade para acessar e editar os dados do time.</p>
+    <label>E-mail</label>
+    <input type="email" id="loginEmail" placeholder="voce@estacio.br" autocomplete="username">
+    <label>Senha</label>
+    <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
+    <button id="loginBtn">Entrar</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
+
+<div class="wrap hidden" id="appRoot">
+  <div class="topbar">
+    <div>
+      <div class="eyebrow" id="eyebrow">
+        PEG 2026 · YDUQS / Estácio
+        <span class="user-chip" id="userChip"></span>
+        <button class="logout-btn" id="logoutBtn">Sair</button>
+      </div>
+      <h1 id="pillarTitle">Painel PEG 2026</h1>
+      <div class="subtitle">Acompanhamento em equipe dos 5 pilares — marque a régua, veja a pontuação real do book e anexe a evidência.</div>
+      <div class="unidade-row">
+        <select id="unidadeSelect" class="unidade-select"></select>
+        <button class="btn-mini" id="novaUnidadeBtn">+ Unidade</button>
+      </div>
+    </div>
+    <div class="gauge-card">
+      <svg width="60" height="60" viewBox="0 0 64 64">
+        <circle cx="32" cy="32" r="27" fill="none" stroke="#2a3138" stroke-width="7"/>
+        <circle id="gaugeCircle" cx="32" cy="32" r="27" fill="none" stroke="#2dd4a7" stroke-width="7" stroke-linecap="round" stroke-dasharray="169.6" stroke-dashoffset="169.6" transform="rotate(-90 32 32)"/>
+      </svg>
+      <div><div class="gauge-num"><span id="gaugePct">0</span>%</div><div class="gauge-label" id="gaugeLabel">Pontos do pilar</div></div>
+    </div>
+  </div>
+
+  <div class="pillar-tabs" id="pillarTabs"></div>
+
+  <div class="status-row">
+    <div class="stat s1"><div class="n" id="cnt1">0</div><div class="l">Régua 1 · na meta</div></div>
+    <div class="stat s2"><div class="n" id="cnt2">0</div><div class="l">Régua 2 · atenção</div></div>
+    <div class="stat s3"><div class="n" id="cnt3">0</div><div class="l">Régua 3 · crítico</div></div>
+    <div class="stat s0"><div class="n" id="cnt0">0</div><div class="l">Não avaliado</div></div>
+  </div>
+
+  <div class="alerts">
+    <h3>Próximos prazos fixos (todos os pilares)</h3>
+    <div id="alertsList"></div>
+  </div>
+
+  <div class="toolbar">
+    <div class="tabs" id="catTabs">
+      <div class="tab active" data-f="todos">Todos</div>
+      <div class="tab" data-f="processo">Processos</div>
+      <div class="tab" data-f="resultado">Resultados</div>
+      <div class="tab" data-f="pendencia">Pendências</div>
+      <div class="tab" data-f="semevidencia">Sem evidência</div>
+    </div>
+    <input class="search" id="search" placeholder="Buscar item...">
+  </div>
+
+  <div class="grid" id="grid"></div>
+  <footer>Dados compartilhados via Supabase entre a equipe · Baseado no Manual PEG Estácio Superbook 2026</footer>
+</div>
+
+<script>
+/* =====================================================================
+   CONFIGURAÇÃO DO SUPABASE — cole aqui os valores do seu projeto
+   (Painel Supabase > Project Settings > API)
+===================================================================== */
+const SUPABASE_URL = 'https://ydmxwkdvmfoibxmcnjky.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_is7Xk6W84ghLhdWomrbeIw_CddKjAyl';
+const EVIDENCE_BUCKET = 'evidencias';
+/* ===================================================================== */
+
+const supa = (SUPABASE_URL.startsWith('http')) ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
+const PILLARS = [
+{key:'atracao', nome:'Atração de Alunos', cor:'#4a9eff', items:[
+ {id:1,cat:'processo',formato:'Checklist',periodicidade:'Contínuo/Semanal',ref:'POP.05.001 / POP.01.194 / POP.01.189',pontos:[20,15,10],
+  titulo:'Elaborar Planejamento Comercial – ciclo vigente de captação',
+  desc:'Gerente comercial apresenta o planejamento comercial do semestre (FDV), com evidências no Auvo. Consultores devem registrar semanalmente 12 tarefas (9 visitas + 3 ações estratégicas) sem pendências.',
+  reguas:['Atende todos os critérios','Atende apenas o critério A','Atende apenas o critério B'],
+  tips:['Registrar o planejamento comercial do semestre no Auvo, com foco em Trade, Escolas e Empresas','Consultores devem lançar 12 tarefas semanais: 9 visitas (75%) + 3 ações estratégicas (25%)','Regularizar pendências (relato, questionário, foto) na mesma semana','Registrar afastamentos (férias, licença, atestado) no Auvo para não entrar na amostragem']},
+ {id:2,cat:'processo',formato:'Checklist',periodicidade:'Contínuo',ref:'POP.07.034',pontos:[20,15,10],
+  titulo:'Gestão de Carteira de Clientes (Carteirização) – Canal Empresa',
+  desc:'Consultor deve ter carteira definida no Auvo, CNPJs com segmento (Ouro/Prata/Bronze) e SLA de visita cumprido, além de Ações de Vendas cadastradas no Salesforce com nomenclatura padrão.',
+  reguas:['Atende todos os critérios','Atende apenas os critérios A, B e C','Atende apenas os critérios A e B'],
+  tips:['Definir carteira de clientes por consultor no Auvo (Cadastro > Clientes)','Cadastrar CNPJ com segmento Ouro/Prata/Bronze, endereço e consultor responsável','Cumprir SLA de visita por segmento: Ouro 1–90 dias, Prata 91–180, Bronze +181','Cadastrar Ações de Vendas no Salesforce com nomenclatura padrão (B2C/B2B)']},
+ {id:3,cat:'processo',formato:'Checklist',periodicidade:'Contínuo',ref:'POP.03.035',pontos:[30,20,10],
+  titulo:'Realizar Gestão da Captação',
+  desc:'Líder da Sala de Matrículas mantém rotina diária com o time, mostra a meta da semana no BI, distribui a meta e mantém domínio de campanhas, descontos e mural atualizado.',
+  reguas:['Atende todos os critérios','Atende apenas os critérios A, B, C e D','Atende apenas os critérios A, B e C'],
+  tips:['Realizar reunião diária da Sala de Matrículas usando o Power BI Curva Funil','Distribuir a meta semanal entre os membros da equipe','Manter mural com números de captação atualizado','Ter acesso pessoal ao BI de captação com login individual']},
+ {id:4,cat:'processo',formato:'Checklist',periodicidade:'Contínuo',ref:'POP.01.043',pontos:[10,27,0],
+  titulo:'Informar corretamente sobre atributos da marca, formas de entrega e cursos',
+  desc:'Colaboradores de SM e FDV devem saber as formas de entrega, TOP 3 cursos da unidade e atributos da marca/unidade; coordenadores/professores e gestor promovem treinamentos periódicos.',
+  reguas:['Todos responderam certo aos critérios A, B e C + unidade atende D, E e F','Ao menos um respondeu certo aos critérios A, B e C + unidade atende D','—'],
+  tips:['Treinar times de SM/FDV sobre formas de entrega (EAD, Ao Vivo, Presencial, Semipresencial)','Garantir conhecimento do TOP 3 cursos e atributos da marca/unidade','Promover treinamento com coordenadores/professores 1x por ciclo ímpar','Líderes da SM devem participar de todas as reuniões de GDA']},
+ {id:5,cat:'processo',formato:'Checklist',periodicidade:'Contínuo',ref:'POP.01.193',pontos:[5,23,0],
+  titulo:'Organização de relatórios no Salesforce para uso diário pela Sala de Matrículas',
+  desc:'Líder da SM tem acesso pessoal ao Salesforce e organiza relatórios por etapa do funil (leads, inscritos, classificados, matrículas financeiras etc.), com filtros corretos.',
+  reguas:['Atende todos os critérios','Atende apenas os critérios A e B','—'],
+  tips:['Organizar relatórios do Salesforce por etapa do funil e prioridade de impacto','Aplicar filtros de campus, período acadêmico e fase do ciclo','Explicar a dinâmica de uso dos relatórios no dia a dia']},
+ {id:6,cat:'resultado',formato:'Indicador',periodicidade:'Mensal',ref:'POP.01.188',pontos:[5,0,0],
+  titulo:'Realizar adesão ao Treinamento da Trilha Comercial',
+  desc:'100% dos colaboradores de FDV, Sala de Matrículas e Gerentes Comerciais devem concluir a Trilha Comercial na Educare (novos contratados em até 15 dias).',
+  reguas:['100% de adesão à Trilha Comercial','—','—'],
+  tips:['Solicitar que todos façam a Trilha Comercial na Educare','Acompanhar adesão pelo indicador PEG - Adesão Trilha Comercial','Novos contratados: concluir em até 15 dias']},
+ {id:7,cat:'resultado',formato:'Indicador',periodicidade:'Anual',ref:'POP.03.035',pontos:[25,20,15],
+  titulo:'Atingir a meta de conversão de Matrículas financeira em acadêmica',
+  desc:'Atingir a meta de conversão de matriculados financeiramente em matriculados academicamente, em todas as modalidades juntas (apenas números originais).',
+  reguas:['Atingimento de 100% ou mais','Entre 99,9% e 91,0%','Entre 90,9% e 81,0%'],
+  tips:['Acessar Power BI [CORP] Captação > Overview > Conversão Funil','Filtrar marca, todas modalidades, período vigente, canal Todos, status Original, campus + polo próprio']},
+ {id:8,cat:'resultado',formato:'Indicador',periodicidade:'Anual',ref:'POP.03.035',pontos:[40,30,20],
+  titulo:'Atingir a meta de captação em Matrículas acadêmicas de Graduação',
+  desc:'A unidade deve atingir a meta de captação em matrículas acadêmicas de Graduação, em todas as modalidades juntas.',
+  reguas:['Atingimento de 100% ou mais','Entre 99,9% e 91,0%','Entre 90,9% e 80,0%'],
+  tips:['Acessar Power BI [CORP] Captação > Overview de Captação','Filtrar todas modalidades, período vigente, canal Todos, status Original, campus + polo próprio']},
+ {id:9,cat:'resultado',formato:'Indicador',periodicidade:'Anual',ref:'POP.03.035',pontos:[15,10,5],
+  titulo:'Atingir a meta de captação em Matrículas acadêmicas de Pós-Graduação',
+  desc:'A unidade deve atingir a meta de captação em matrículas acadêmicas de Pós-Graduação, em todas as modalidades juntas.',
+  reguas:['Atingimento de 100% ou mais','Entre 99,9% e 91,0%','Entre 90,9% e 80,0%'],
+  tips:['Acessar Power BI [CORP] Captação > Overview de Captação Pós-Graduação','Filtrar todas modalidades, período vigente, canal Todos, status Original, campus + polo próprio']},
+ {id:10,cat:'resultado',formato:'Indicador',periodicidade:'Anual',ref:'POP.03.035',pontos:[15,10,5],
+  titulo:'Atingir a meta de Matrícula acadêmica do Subcanal Empresa',
+  desc:'O subcanal EMPRESA deve atingir a meta de matrícula acadêmica em todas as modalidades juntas (unidade + polo próprio).',
+  reguas:['Atingimento maior ou igual a 105,00%','Entre 104,99% e 100,00%','Entre 99,9% e 81,0%'],
+  tips:['Acessar Power BI [CORP] Captação > Overview de Captação','Filtrar canal EMPRESA, status Original, campus + polo próprio']},
+]},
+
+{key:'academica', nome:'Excelência Acadêmica', cor:'#a78bfa', items:[
+ {id:1,cat:'processo',formato:'Checklist',periodicidade:'Contínuo',ref:'POP.01.176',pontos:[10,27,4],
+  titulo:'Aumentar a adesão do corpo docente nos treinamentos realizados',
+  desc:'Garantir adesão aos treinamentos obrigatórios ofertados na Educare (Ensinos Clínicos, Modelo Acadêmico, TEAMS, elaboração SIRIUS, NAAP).',
+  reguas:['Acima de 85% de adesão em todos os treinamentos','80% a 84% de adesão','75% a 79% de adesão'],
+  tips:['Incentivar docentes a concluir os treinamentos obrigatórios indicados','Acompanhar adesão no Painel Capacitação Docente - Power BI','BI atualizado quinzenalmente, disponível em até 5 dias úteis']},
+ {id:2,cat:'processo',formato:'Checklist',periodicidade:'Contínuo',ref:'PGE.04.033',pontos:[10,27,4],prazos:[{label:'Postagem evidência - referência jul/26',date:'2026-08-10'},{label:'Postagem evidência - referência set/26',date:'2026-10-10'}],
+  titulo:'Realizar Gestão do Ciclo ENADE nas Unidades',
+  desc:'Manter 100% do quadro docente com titulação atualizada no e-MEC/SIA, executar o Plano de Ação ENADE da Regional no prazo e manter o mural ENADE atualizado.',
+  reguas:['Atende todos os critérios','Atende aos critérios A e B','Atende apenas ao critério A'],
+  tips:['Manter titulação docente 100% atualizada no e-MEC e SIA','Postar evidências do Plano de Ação ENADE dentro do prazo mensal (dia 10)','Manter mural ENADE atualizado conforme fase do processo']},
+ {id:3,cat:'processo',formato:'Checklist',periodicidade:'Mensal',ref:'POP.05.175 / POP.05.001 / POP.05.190 / POP.05.003',pontos:[30,20,10],
+  titulo:'Realizar reuniões de GDA para monitoramento de indicadores',
+  desc:'Reunião mensal de Gestão do Desempenho Acadêmico (GDA), com pauta padrão, análise de causa raiz de desvios e planos de ação.',
+  reguas:['Atende todos os critérios','Atende aos critérios A, B, C, D e E','Atende aos critérios A, B e C'],
+  tips:['Reunião mensal de GDA com pauta e participantes conforme POP.05.175','Analisar causa raiz de desvios (FCA) e plano de ação (POP.05.001)','Coordenadores de curso navegam no BI Pulso Acadêmico apresentando indicadores da área','Líder Acadêmico apresenta ações sobre Custo Docente, CF e aulas não lecionadas']},
+ {id:4,cat:'processo',formato:'Checklist',periodicidade:'Contínuo',ref:'POP.01.169',pontos:[10,27,4],
+  titulo:'Avaliar a atuação do NAAP',
+  desc:'Manter o Núcleo de Apoio e Atendimento Psicopedagógico (NAAP) em funcionamento, com espaço adequado, profissional alocado, registro de NEE/PEI e plano de ação em execução.',
+  reguas:['Atende todos os critérios','Atende aos critérios A, B e C','Atende aos critérios A e B'],
+  tips:['Garantir espaço adequado, confidencial e privado para atendimento','Ter profissional alocado conforme CH mínima (10h a 40h conforme base de alunos)','Registrar atendimentos NEE/PEI no BI NAAP','Executar 75% do plano de ação do NAAP até a visita']},
+ {id:5,cat:'processo',formato:'Checklist',periodicidade:'Contínuo',ref:'PGE.01.170 / POP.01.182',pontos:[25,20,15],
+  titulo:'Realizar as ações do Colegiado, NDE e CPA',
+  desc:'Manter atos de nomeação atualizados, regulamentos aprovados, reuniões trimestrais com atas, plano de ação da CPA e mural atualizado.',
+  reguas:['Atende todos os critérios','Atende aos critérios A, B, C e D','Atende apenas os critérios A e B'],
+  tips:['Manter atos de nomeação atualizados do NDE e CPA','Realizar reuniões trimestrais (mínimo 4 atas) com atas assinadas','Manter mural da CPA atualizado com resultado do ISA e plano de ação']},
+ {id:6,cat:'processo',formato:'Checklist',periodicidade:'Contínuo',ref:'POP.01.048',pontos:[25,20,15],prazos:[{label:'Data de corte do indicador de estágio',date:'2026-11-06'}],
+  titulo:'Garantir os processos relativos à jornada de estágio dos estudantes',
+  desc:'Cobertura de convênios, TCEs deferidos, restrição de estágio fora da elegibilidade, resposta a requerimentos e postagem de documentação no Cerebrum.',
+  reguas:['Atende todos os itens','Atende os itens A, B, C e D','Atende os itens A, B e C'],
+  tips:['Garantir ≥85% de cobertura de convênios para cursos de Saúde/Educação','Atingir 83% de TCEs deferidos e restringir a 7% estágios fora da elegibilidade','Responder 86,5% dos requerimentos de estágio no prazo','Garantir postagem no Cerebrum da documentação obrigatória de estágio']},
+ {id:7,cat:'resultado',formato:'Indicador',periodicidade:'Semestral',ref:'POP.01.171',pontos:[10,27,4],
+  titulo:'Manter custo docente/aluno conforme planejado',
+  desc:'Garantir que o custo docente por aluno da graduação (presencial, semi, ao vivo) esteja dentro do orçamento semestral previsto.',
+  reguas:['Variação negativa de 5,01% ou mais (real x orçado)','Entre -5,00% e +5,00%','Entre +5,01% e +15,00%'],
+  tips:['Acessar o Book de Resultados (DPA) e comparar Realizado x Orçado','Filtrar Operações Próprias, BU Presencial, Graduação/Tecnológica','Polaridade: menor melhor']},
+ {id:8,cat:'resultado',formato:'Indicador',periodicidade:'Contínuo',ref:'PGE.01.176',pontos:[15,10,5],
+  titulo:'Atingir conceito satisfatório na visita de avaliação do INEP/MEC',
+  desc:'Ter conceitos satisfatórios em todas as visitas do INEP/MEC no ano, sem impugnações nem protocolos de compromisso em andamento.',
+  reguas:['Conceito 4+, sem impugnações/protocolos','Conceito 4+ e/ou até 2 impugnações/protocolos','Conceito 4+ e/ou 3-4 impugnações/protocolos'],
+  tips:['Verificar o Painel de Controle de Visitas da Diretoria de Regulação/ENADE','Acompanhar impugnações e protocolos de compromisso em andamento no e-MEC']},
+ {id:9,cat:'resultado',formato:'Indicador',periodicidade:'Contínuo',ref:'BI ENADE',pontos:[25,20,15],
+  titulo:'Garantir conceitos satisfatórios em notas ENADE e CPC',
+  desc:'100% dos cursos avaliados com CPC ≥3, e no mínimo 70% dos cursos com conceito ENADE ≥3.',
+  reguas:['100% CPC satisfatório e 70% ENADE satisfatório','100% CPC satisfatório e 65% ENADE satisfatório','100% CPC satisfatório'],
+  tips:['Acessar BI ENADE > Painel Regulatório > PEG > Gestão Ciclo ENADE','Verificar % CPC (meta 100%) e % ENADE (meta 70%) por unidade']},
+ {id:10,cat:'resultado',formato:'Indicador',periodicidade:'Semestral',ref:'POP.01.054',pontos:[10,27,4],
+  titulo:'Engajar os estudantes para melhorar o tempo de estudo digital',
+  desc:'Medir o tempo médio de estudo do aluno no SAVA em relação à meta estabelecida pela área de Ensino.',
+  reguas:['Atingir 125% da meta','Atingir 100% da meta','Atingir 90% da meta'],
+  tips:['Acessar relatório PULSO (Tempo de Estudo) por ano de entrada e campus','Resultado = média de atingimento dos semestres']},
+ {id:11,cat:'resultado',formato:'Indicador',periodicidade:'Semestral',ref:'POP.01.054',pontos:[10,27,4],
+  titulo:'Estimular a frequência dos alunos nas aulas presenciais',
+  desc:'Medir a frequência presencial do aluno em sala (modalidades Presencial e Semipresencial) em relação à meta.',
+  reguas:['Atingir 100% da meta','Atingir 95% da meta','Atingir 90% da meta'],
+  tips:['Acessar relatório PULSO - Frequência às aulas presenciais','Válido para modalidades Presencial e Semipresencial']},
+ {id:12,cat:'resultado',formato:'Indicador',periodicidade:'Semestral',ref:'POP.01.054',pontos:[10,27,4],
+  titulo:'Garantir adesão nas atividades avaliativas (SM, AV e AVS)',
+  desc:'Medir o percentual de realização de simulados e avaliações (AV) pelos alunos em relação à meta.',
+  reguas:['Atingir 100% da meta','Atingir 95% da meta','Atingir 90% da meta'],
+  tips:['Acessar relatório PULSO - Atividades Avaliativas AV e SM','Adesão medida por alunos-disciplina que realizaram avaliação/simulado']},
+ {id:13,cat:'resultado',formato:'Indicador',periodicidade:'Semestral',ref:'POP.01.190',pontos:[10,27,4],
+  titulo:'Aumentar o grau de aprendizagem dos alunos',
+  desc:'Medir a proporção de alunos com nota igual ou superior à nota esperada nas avaliações.',
+  reguas:['Atingir 125% da meta','Atingir 100% da meta','Atingir 90% da meta'],
+  tips:['Acessar relatório PULSO - Grau de Aprendizagem','Mede % de alunos com nota ≥ nota esperada na avaliação']},
+ {id:14,cat:'resultado',formato:'Indicador',periodicidade:'Semestral',ref:'POP.01.190',pontos:[5,23,2],
+  titulo:'Atingir o crédito financeiro',
+  desc:'A unidade deve atingir o crédito financeiro (CF) realizado no momento da enturmação nos dois semestres.',
+  reguas:['Aumentar o crédito financeiro da enturmação','Manter o crédito financeiro realizado na enturmação','Abaixo em até 1% do crédito financeiro realizado'],
+  tips:['Acessar Renovação - MD (Power BI)','Desvio máximo tolerado: 1% abaixo do CF da enturmação']},
+ {id:15,cat:'resultado',formato:'Indicador',periodicidade:'Semestral',ref:'POP.01.191',pontos:[5,23,2],
+  titulo:'Assegurar a ciência no documento de MQD',
+  desc:'Manter atualizada a carga horária dos docentes no sistema MQD (Movimentação de Quadro Docente).',
+  reguas:['Acima de 90% de MQD assinadas (demais justificadas)','Entre 80% e 89% de MQD assinadas','Entre 70% e 79% de MQD assinadas'],
+  tips:['Comunicar docentes impactados por redução de CH para aceite do termo','Acompanhar % de assinaturas no BI MQD / Farol Analítico','Em caso de recusa, Gerência Acadêmica preenche e formaliza com assinatura do BP/Gestor']},
+]},
+
+{key:'encantamento', nome:'Encantamento do Aluno', cor:'#f472b6', items:[
+ {id:1,cat:'processo',formato:'Checklist',periodicidade:'Semestral',ref:'POP.01.158',pontos:[25,20,15],
+  titulo:'Realizar o engajamento do aluno calouro BU Presencial',
+  desc:'Focal NAE deve atuar no GPA Calouro (e-mail/WhatsApp) conforme Mapa GPA, com dossiê comprobatório de 12 alunos por semestre.',
+  reguas:['Dossiê completo (12 alunos) + todas as mensagens com retorno','Dossiê completo + apenas parte com retorno','Dossiê completo, envio comprovado sem retorno'],
+  tips:['Atuar no GPA Calouro via e-mail/WhatsApp conforme o Mapa GPA','Montar dossiê com 12 alunos: 4 prints Relacional, 4 Engajamento (Simulado), 4 Avaliações (AV)','Guardar prints de envio e, quando houver, resposta do aluno']},
+ {id:2,cat:'processo',formato:'Checklist',periodicidade:'Contínuo',ref:'POP.01.160',pontos:[20,15,10],
+  titulo:'Adesão ao Modelo de Atendimento',
+  desc:'Secretaria usa o FilaH com gravação de atendimentos; Focal NAE usa o SIA de ponta a ponta; Coordenador de Relacionamento gerencia os atendimentos.',
+  reguas:['Atende todos os critérios','Atende os critérios A e B','Atende apenas o critério A'],
+  tips:['Usar FilaH na secretaria com gravação de todos os atendimentos presenciais','Focal NAE usa o SIA de ponta a ponta, registrando e gravando atendimentos','Coordenador de Relacionamento deve gerir volumetria e ouvir gravações (Personata)']},
+ {id:3,cat:'processo',formato:'Checklist',periodicidade:'Contínuo',ref:'POP.01.162',pontos:[15,10,5],
+  titulo:'Adesão ao Layout de Atendimento',
+  desc:'Secretaria e NAE devem estar aderentes ao padrão de infraestrutura (layout, adesivação, sinalização) da Gerência de Relacionamento.',
+  reguas:['Cumpriu 100% do layout na Secretaria e NAE','Cumpriu 100% apenas na Secretaria','Cumpriu 100% apenas no NAE'],
+  tips:['Secretaria: adesivação, sinalização, vidro divisório, Fila H, microfone, horário 10h-20h','NAE: sala privativa e isolada, adesivação, microfone, sinalização na porta']},
+ {id:4,cat:'processo',formato:'Checklist',periodicidade:'Semestral',ref:'POP.01.192 (Boas-vindas)',pontos:[15,10,5],
+  titulo:'Ações de boas-vindas, atributos do curso e palestras com egressos',
+  desc:'Realizar ações que destaquem atributos dos cursos mais representativos, palestra "Aluno Inspirador" com egresso e atividades de boas-vindas com presença mínima.',
+  reguas:['Atende todos os critérios','Atende os critérios A e B','Atende apenas o critério A'],
+  tips:['Realizar 2 ações em 2 dos 10 cursos mais representativos, evidenciando atributos locais','Realizar a palestra "Aluno Inspirador" com egresso na semana de boas-vindas','Garantir presença superior a 5% em cada atividade de boas-vindas do semestre ímpar']},
+ {id:5,cat:'processo',formato:'Checklist',periodicidade:'Contínuo',ref:'POP.01.192',pontos:[10,27,42],
+  titulo:'Manter atualizado o mural de alunos',
+  desc:'Manter murais obrigatórios por tema: Coordenadores de curso, Formandos, Trabalhabilidade/Carreiras, Estágio, Informações Financeiras e Digital/Polo EAD.',
+  reguas:['Atende todos os critérios','Atende apenas os critérios A, B e C','Atende apenas o critério A'],
+  tips:['Manter 1 mural para cada tema obrigatório (mínimo 6 murais)','Cada mural deve conter as informações específicas exigidas pelo tema','Atualizar conforme calendário acadêmico vigente']},
+ {id:6,cat:'resultado',formato:'Indicador',periodicidade:'Trimestral',ref:'Gerência de Relacionamento',pontos:null,
+  titulo:'Adesão às avaliações do aluno calouro (simulado, socioemocional, AV)',
+  desc:'Garantir adesão dos calouros e 1R/2R (BU Digital e Presencial) às avaliações, com melhora em relação ao ano anterior em todos os ciclos.',
+  reguas:['Melhora em todos os indicadores em 26.1, 26.2 EAD e 26.3','Melhora em 26.1 e 26.2 EAD','Melhora em 26.2 EAD e 26.3'],
+  tips:['Adesão deve ser ≥ ao ano anterior em todos os ciclos (simulado, sócio, AV)','Acompanhar relatório divulgado pela Gerência de Relacionamento com o Aluno']},
+ {id:7,cat:'resultado',formato:'Indicador',periodicidade:'Semestral',ref:'PGE.06.008',pontos:[6,24,2],
+  titulo:'Incentivar a participação dos alunos nas iniciativas de Carreiras',
+  desc:'Designar focal de Carreiras e garantir participação mínima da base de alunos na Feira Nacional de Estágio e Empregos.',
+  reguas:['Focal dedicado + 30% de participação na Feira','Focal dedicado + 20% de participação na Feira','Possui focal de carreiras'],
+  tips:['Designar focal de carreiras e participar do Grupo Nacional/Regional','Divulgar a Feira Nacional de Estágio e Empregos (murais, salas, redes sociais)']},
+ {id:8,cat:'resultado',formato:'Indicador',periodicidade:'A cada período',ref:'POP.01.187',pontos:[20,15,10],
+  titulo:'Permanência da base da BU Digital e Presencial',
+  desc:'Garantir a permanência de base (BU Presencial + Digital), avaliando total da base e base caloura, ao longo dos 4 períodos do ano.',
+  reguas:['Permanência total e do calouro em 10-12 meses do ano','Permanência total e calouro em 8-9 meses do ano','Permanência entre 8-12 meses (total), sem atingir a do calouro'],
+  tips:['Acessar BI de Desempenho, filtrar BU Presencial + Digital, polo próprio','Avaliar em quantos meses do ano a meta de permanência foi atingida']},
+ {id:9,cat:'resultado',formato:'Indicador',periodicidade:'Semestral',ref:'POP.01.004',pontos:[7,25,3],
+  titulo:'Conformidade Documentação Aluno ingressante PROUNI',
+  desc:'Garantir 100% de conformidade da documentação completa dos ingressantes PROUNI (2026.1 e 2026.3), aprovada no Digitaliza Captação.',
+  reguas:['Média ≥95% de conformidade (26.1 + 26.3)','Média ≥90% de conformidade','Média ≥85% de conformidade'],
+  tips:['Acompanhar o Farol de Pendência Documental PROUNI (e-mail quinzenal)','Documentação completa e aprovada no Digitaliza Captação (status 7.0 - Concluído)']},
+ {id:10,cat:'resultado',formato:'Indicador',periodicidade:'Semestral',ref:'POP.03.010',pontos:[7,25,3],
+  titulo:'Eficiência, Backlog e Monitoria da Qualidade dos Requerimentos',
+  desc:'Assegurar eficiência no atendimento de requerimentos, ausência de backlog e conformidade com o POP de Hospitalidade.',
+  reguas:['95% eficiência, sem backlog, 95% conformidade Hospitalidade','94,1-94,9% eficiência, 1-3% backlog, 80% conformidade','93-94% eficiência, 3,1-5% backlog'],
+  tips:['Acessar Painel 3R > Atendimento > Requerimento > Farol Eficiência','Garantir conformidade com o POP de Hospitalidade (POP.03.010)']},
+ {id:11,cat:'resultado',formato:'Indicador',periodicidade:'Semestral',ref:'POP.03.038',pontos:[10,27,4],
+  titulo:'Aumentar a adesão à Pesquisa ISA',
+  desc:'Atingir percentual de adesão à pesquisa ISA estabelecido pela Gerência de Relacionamento, considerando os 2 semestres.',
+  reguas:['≥30% no 1º sem e ≥35% no 2º sem','≥30% no 1º sem e ≥32% no 2º sem','≥24% no 1º sem e ≥25% no 2º sem'],
+  tips:['Acessar painel ISA Graduação > NPS e Adesão por Campus GDO','Filtrar marca Estácio, polo parceiro = Não']},
+ {id:12,cat:'resultado',formato:'Indicador',periodicidade:'Anual',ref:'POP.03.037',pontos:[10,27,4],
+  titulo:'Close The Loop dos detratores NPS',
+  desc:'Garantir resolução, prazo de fechamento e contato bem-sucedido nos alertas de detratores, com evidências guardadas.',
+  reguas:['85% resolvidos, 75% no prazo, 65% contato com sucesso','85% resolvidos + 75% no prazo','85% dos problemas resolvidos'],
+  tips:['Acessar o Medallia e aplicar os filtros de data, programa e marca','Guardar evidências de contato bem-sucedido (prints, e-mails, ligações)','Somente cargos de gestão autorizados podem tratar os alertas']},
+ {id:13,cat:'resultado',formato:'Indicador',periodicidade:'Anual',ref:'POP.03.037',pontos:[30,20,10],
+  titulo:'% evolução do NPS Veteranos',
+  desc:'Garantir melhoria do NPS de janeiro a dezembro para alunos veteranos, conforme meta por unidade (elegibilidade ≥100 respostas em 2025 e 2026).',
+  reguas:['Atingiu o crescimento esperado conforme meta da unidade','Cresceu, porém abaixo da meta','Repetiu o resultado do ano anterior (sem piora)'],
+  tips:['Acessar Medallia, filtrar Aluno calouro = Não, Graduação/Tecnológica','Elegibilidade: ≥100 respostas em 2025 e ≥100 em 2026']},
+]},
+
+{key:'engajamento', nome:'Engajamento e Cultura', cor:'#fb923c', items:[
+ {id:1,cat:'processo',formato:'Checklist',periodicidade:'Contínuo',ref:'POP.05.114',pontos:[30,20,10],
+  titulo:'Atualizar o quadro de Gestão à Vista',
+  desc:'Manter quadro de Gestão à Vista com 9 indicadores obrigatórios atualizados e líderes com domínio sobre sua leitura e análise.',
+  reguas:['Todos demonstram domínio total + quadro completo','Líderes dominam sua área + quadro completo','Quadro completo com dados da última apuração'],
+  tips:['Manter quadro com os 9 indicadores: ROL, Captação, Base de Alunos, Margem Ebitda/Ebitda, NPS, % Requerimentos no prazo, Qualidade do Ensino, Desligamento Voluntário, Plano de Ação','Atualizar em até 5 dias úteis após divulgação da Pivot Financeira','Líderes devem dominar os indicadores da sua área na entrevista']},
+ {id:2,cat:'processo',formato:'Checklist',periodicidade:'Contínuo',ref:'POP.05.114',pontos:[10,27,4],
+  titulo:'Disseminar a cultura para todos os colaboradores',
+  desc:'Verificar via quiz interativo se colaboradores conhecem propósito, visão e valores da companhia (amostra: 3 administrativos + 2 docentes).',
+  reguas:['100% de aderência (5 de 5 colaboradores)','80% de aderência (4 de 5 colaboradores)','60% de aderência (3 de 5 ou menos)'],
+  tips:['Garantir que colaboradores conheçam propósito, visão e valores da companhia','Praticar o quiz de cultura com 3 administrativos + 2 docentes','Citar valores nas reuniões e promover eventos de cultura na unidade']},
+ {id:3,cat:'processo',formato:'Checklist',periodicidade:'Anual',ref:'POP.06.006',pontos:[5,23,0],prazos:[{label:'Cadastro de ação no Portal Mobiliza',date:'2026-10-31'}],
+  titulo:'Atividades do Portal Mobiliza e Semana de Sustentabilidade',
+  desc:'Cadastrar ação voluntária exclusiva no Portal Mobiliza e realizar ao menos 2 atividades na Semana de Sustentabilidade com participação discente.',
+  reguas:['Atende todos os critérios','Atende apenas o critério A','—'],
+  tips:['Cadastrar até 31/10 pelo menos 1 ação voluntária exclusiva no Portal Mobiliza','Realizar ao menos 2 atividades na Semana de Sustentabilidade com participação discente']},
+ {id:4,cat:'processo',formato:'Checklist',periodicidade:'Anual',ref:'POP.06.006',pontos:[5,23,0],
+  titulo:'Planejar e realizar Ação Solidária na unidade',
+  desc:'Produzir vídeo com registro de participação dos alunos, postar no Instagram e enviar relatório final ao Instituto YDUQS.',
+  reguas:['Atende todos os critérios','Atende apenas o critério A','—'],
+  tips:['Produzir vídeo com registro de participação dos alunos na Ação Solidária Nacional','Postar no Instagram as ações da campanha','Enviar relatório final ao Instituto YDUQS dentro do prazo estipulado']},
+ {id:5,cat:'processo',formato:'Checklist',periodicidade:'Anual',ref:'POL.05.051',pontos:[6,24,2],prazos:[{label:'Termo de adesão Núcleo de Diversidade assinado',date:'2026-10-30'}],
+  titulo:'Vagas para grupos minorizados e ações de diversidade e inclusão',
+  desc:'Assegurar vagas reservadas para grupos minorizados, consolidar ações de diversidade em PPT e assinar termo do Núcleo de Diversidade.',
+  reguas:['5 vagas divulgadas/preenchidas + 5 ações + termo assinado','3 vagas + 3 ações + termo assinado','2 vagas + 2 ações + termo assinado'],
+  tips:['Publicar vagas exclusivas na Gupy citando o grupo minorizado no título','Consolidar ações de diversidade/inclusão em PPT','Assinar termo de adesão do Núcleo de Diversidade e Sustentabilidade até 30/10']},
+ {id:6,cat:'processo',formato:'Checklist',periodicidade:'Contínuo',ref:'SISPEG',pontos:[7,25,3],prazos:[{label:'Ações de engajamento sobre o PEG',date:'2026-10-31'}],
+  titulo:'Assegurar a gestão eficiente do PEG na unidade',
+  desc:'Concluir Autoavaliações do PEG no SISPEG (focal + gestor), realizar ações de engajamento sobre o PEG e elaborar plano de ação para itens não pontuados.',
+  reguas:['Atende todos os critérios','Atende os critérios A e B','Atende apenas o critério A'],
+  tips:['Concluir Autoavaliações do PEG no SISPEG (focal + gestor) no prazo','Realizar 2 ações de engajamento sobre o PEG até outubro/2026','Elaborar plano de ação para itens não pontuados e evoluir em ao menos 3 na reavaliação']},
+ {id:7,cat:'processo',formato:'Checklist',periodicidade:'Contínuo',ref:'POP.05.211',pontos:[7,25,0],
+  titulo:'Realizar a gestão do eNPS Geral',
+  desc:'Apresentar plano de ação com iniciativas concluídas, focado nas dimensões do eNPS com pior desempenho no Medallia.',
+  reguas:['Plano de ação estruturado com evidências e evolução vs. 2025','Plano de ação estruturado (problema/causa/solução) com evidências','—'],
+  tips:['Acessar o Medallia (perfil Trilhar) e comparar eNPS 2025 x acumulado atual','Focar o plano de ação nas dimensões/afirmativas com pior desempenho']},
+ {id:8,cat:'resultado',formato:'Indicador',periodicidade:'Mensal',ref:'POP.05.102 / POP.05.212',pontos:[15,0,0],
+  titulo:'Capacitar colaboradores na Matriz de Capacitação e Processos (MCP)',
+  desc:'Garantir 100% de adesão dos colaboradores do grupo "Apoio" cadastrados no ADP quanto à realização do treinamento no MCP.',
+  reguas:['100% de adesão do grupo Apoio no MCP','—','—'],
+  tips:['Cada colaborador realiza o treinamento MCP conforme sua função','Manter cadastro no MCP idêntico ao ADP (nome, acentos, espaços)','Novos colaboradores: concluir em até 30 dias após admissão']},
+ {id:9,cat:'resultado',formato:'Indicador',periodicidade:'Anual (menor melhor)',ref:'POP.05.210',pontos:[15,10,5],
+  titulo:'Índice de Desligamento dentro da faixa estipulada',
+  desc:'Diminuir o índice de desligamento voluntário de colaboradores (grupo Apoio, CLT), acumulado no ano.',
+  reguas:['≤9,70%','Entre 9,71% e 10,70%','Entre 10,71% e 11,70%'],
+  tips:['Acessar BI Índice de Desligamento, filtrar Apoio + CLT','Elaborar plano de ação de retenção junto com Gente e Gestão']},
+ {id:10,cat:'resultado',formato:'Indicador',periodicidade:'Mensal',ref:'POL.05.043',pontos:[15,10,0],
+  titulo:'Atender a cota legal de Pessoas com Deficiência (PCD)',
+  desc:'Superar a meta de contratação de PCD conforme o BI de PCD (data de corte 31/12/2026).',
+  reguas:['Exceder 100% da cota','Atingir 100% da cota','—'],
+  tips:['Acessar o BI de PCD (Diversidade YDUQS)','Manter banco de talentos PCD e priorizar contratação em turnover']},
+ {id:11,cat:'resultado',formato:'Indicador',periodicidade:'Contínuo',ref:'POP.05.187',pontos:[35,25,15],prazos:[{label:'Prazo final treinamentos + Trilha IA',date:'2026-12-01'}],
+  titulo:'Treinamentos obrigatórios e Trilha de Letramento em IA',
+  desc:'Concluir NR01, Compliance, Prevenção ao Assédio e Gestão de Riscos; time administrativo concluir a Trilha de IA (módulos 1, 2 e parte do 3).',
+  reguas:['99-100% treinamentos + 55% Trilha de IA','96-98% treinamentos + 45% Trilha de IA','90-95% treinamentos + 30% Trilha de IA'],
+  tips:['Concluir NR01, Compliance (Ética/Anticorrupção/LGPD/Seg. Informação), Prevenção ao Assédio, Gestão de Riscos','Time administrativo: concluir os 2 primeiros módulos da Trilha de IA + 1 conteúdo do módulo 3','Acompanhar o BI Educare (atualização semanal, às sextas-feiras)']},
+ {id:12,cat:'resultado',formato:'Indicador',periodicidade:'Mensal (menor melhor)',ref:'POL.05.005',pontos:[20,15,10],
+  titulo:'Manter a Gestão de Banco de Horas',
+  desc:'A unidade não pode ter colaborador com banco de horas positivo nas folhas de setembro, outubro e novembro.',
+  reguas:['Banco de horas positivo limitado a 0h','Limitado a até 20h','Limitado a até 40h'],
+  tips:['Acessar o BI Banco de Horas > Aba Geral','Tratar o ponto rotineiramente antes do fechamento da folha','Vigias não são contabilizados neste item']},
+]},
+
+{key:'eficiencia', nome:'Eficiência Operacional', cor:'#2dd4a7', items:[
+ {id:1,cat:'processo',formato:'Checklist',periodicidade:'Contínuo',ref:'PGE.05.169',pontos:[5,23,0],
+  titulo:'Gerir documentação MEC e da biblioteca com conformidade',
+  desc:'A unidade deve possuir na Pasta MEC da Biblioteca os contratos, aditivos e documentos nas versões corretas, conforme checklist PEG, e manter o Mural da Biblioteca atualizado com os informativos obrigatórios.',
+  reguas:['Atende toda a documentação solicitada no item','Atende apenas o Mural','—'],
+  tips:['Verificar checklist PEG conforme o tipo de biblioteca (Com/Sem Acervo)','Conferir contratos e aditivos das bibliotecas virtuais e do Pergamum nas versões corretas','Checar preenchimento de "Política de Aquisição" e "Política de Conservação do Acervo"','Manter mural atualizado: Minha Biblioteca, EBSCO, RT Online, WiFi, NVDA/DOSVOX, VLibras, Visita Guiada, Horário']},
+ {id:2,cat:'processo',formato:'Checklist',periodicidade:'Mensal',ref:'POP.05.004 / POP.05.001 / POP.05.190 / POP.05.003',pontos:[30,20,10],
+  titulo:'Realizar reuniões de GDO com eficiência, monitorando indicadores e analisando desvios',
+  desc:'A unidade realiza reuniões de Gestão de Desempenho Operacional (GDO) mensalmente, avaliando metas (Jano), resultado YTD, análise de desvios, planos de ação e domínio dos colaboradores entrevistados.',
+  reguas:['Todos os critérios atendidos','Critérios 1, 2, 3, 4 e 5 atendidos','Critérios 1, 2 e 3 atendidos'],
+  tips:['GDO deve ocorrer mensalmente, com lista de participantes conforme POP.05.004','Pauta deve abordar status dos indicadores (Jano), causa raiz de desvios e plano de ação','Gestor e Coordenador de Relacionamento devem abrir o Jano para conferência dos indicadores','Garantir que Coord. de Relacionamento e Líder de Sala de Matrículas conheçam os temas da GDO']},
+ {id:3,cat:'processo',formato:'Checklist',periodicidade:'Prazos fixos',ref:'PGE.05.182',pontos:[8,26,4],
+  titulo:'Assegurar a promoção da acessibilidade',
+  desc:'A unidade deve atingir no mínimo 80% de conformidade no checklist de acessibilidade, apurado pela área de Infraestrutura, e assegurar promoção contínua da acessibilidade.',
+  reguas:['≥88,1% do checklist, com Book de Evidências e Plano de Ação no prazo','Entre 88,0% e 85,1% do checklist','Entre 85,0% e 80,0% do checklist'],
+  tips:['Realizar ronda classificando itens: atendido, não atendido, parcial ou não se aplica','Montar book de evidências para cada item do checklist','Entregar via SharePoint PEG2026 - Acessibilidade (2 etapas: intermediária e final)','Preencher plano de ação para os itens não atendidos'],
+  prazos:[{label:'Entrega intermediária',date:'2026-08-07'},{label:'Entrega final',date:'2026-10-09'},{label:'Resultado no Farol de Entregas',date:'2026-10-30'}]},
+ {id:4,cat:'processo',formato:'Checklist',periodicidade:'2 fases/ano',ref:'PGE.05.181 / PGE.05.192 / POL.04.040',pontos:[7,25,3],
+  titulo:'Realizar a gestão Socioambiental e dos itens de Segurança do Trabalho da Unidade',
+  desc:'Gestão socioambiental (água/esgoto, resíduos, GEE) e Segurança do Trabalho (NR-1, treinamentos, CIPA, SPCI, BVI). Somente a 2ª fase do Formulário Unificado de SMA pontua no PEG.',
+  reguas:['≥90% Seção Ambiental e ≥72% Seção Segurança do Trabalho','88–89,99% Ambiental e 68–71,99% Segurança','85–87,99% Ambiental e 65–67,99% Segurança (mínimo p/ régua 3)'],
+  tips:['Preencher o Formulário Unificado de SMA e anexar evidências no SharePoint','Consultar % atingido na pasta "RESULTADOS 2ª FASE - 2026"','Corrigir não conformidades da 1ª fase antes de enviar a 2ª fase'],
+  prazos:[{label:'Início 2ª fase (preenchimento)',date:'2026-08-10'},{label:'Fim do preenchimento 2ª fase',date:'2026-08-28'},{label:'Resultado final 2ª fase',date:'2026-10-05'}]},
+ {id:5,cat:'processo',formato:'Checklist',periodicidade:'Contínuo',ref:'PGE.05.173 / POL.05.052',pontos:[6,24,0],
+  titulo:'Assegurar a regularidade e conformidade da documentação legal do imóvel',
+  desc:'Manter Alvará de Funcionamento, Licença Sanitária (ou dispensa) e AVCB regulares e no prazo, além do contrato de locação com todos os aditivos vigentes.',
+  reguas:['Todos os documentos vigentes (AVCB, Alvará, Licença Sanitária, contrato + aditivos)','Documento vencido com protocolo de renovação + contrato/aditivos vigentes','—'],
+  tips:['Apresentar AVCB, Alvará e Licença Sanitária vigentes','Manter contrato de locação com todos os aditivos (do 1º ao mais recente)','Contatar a Célula de Licenciamento (Real Estate) se faltar cópia de algum documento']},
+ {id:6,cat:'processo',formato:'Checklist',periodicidade:'Contínuo',ref:'PGE.05.174',pontos:[7,25,3],
+  titulo:'Assegurar limpeza, conservação e organização geral da unidade',
+  desc:'Manter limpeza/conservação/organização (mín. 70% do checklist) e atingir a eficiência operacional de limpeza ideal (m² operacional vs FTEs de limpeza).',
+  reguas:['Checklist ≥90% e eficiência operacional ≥5%','Checklist 80–89,99% e eficiência 1–4,99%','Checklist 70–79,99% e eficiência <1%'],
+  tips:['Fazer ronda pelo checklist de Real Estate/Facilities e mapear itens não atendidos','Elaborar plano de ação (POP.05.001) e reaplicar o checklist','Verificar o Relatório de Eficiência Operacional enviado por Real Estate e Facilities','"Mínimo Operacional" = até 3 FTEs de limpeza sem viabilidade técnica de redução']},
+ {id:7,cat:'processo',formato:'Checklist',periodicidade:'Mensal (SLA)',ref:'PGE.05.176 e POPs de manutenção',pontos:[15,10,5],
+  titulo:'Gerir espaços e manutenção de sistemas essenciais (AC, elevadores, subestação, SPCI)',
+  desc:'Registrar contratos e relatórios técnicos no Infraspeak, executar manutenção preventiva, responder SLA de fornecedores mensalmente e manter chamados corretivos atualizados.',
+  reguas:['Atende todos os critérios (A a E)','Atende os critérios A, B e C','Atende apenas o critério A'],
+  tips:['Registrar contratos de manutenção de AC, elevador e subestação no Infraspeak','Executar manutenções preventivas conforme agendamento e escopo contratual','Responder o SLA de Avaliação de Fornecedores todo mês (jan–dez)','Manter chamados corretivos atualizados; escalar à regional quando fora da alçada']},
+ {id:8,cat:'processo',formato:'Checklist',periodicidade:'Contínuo',ref:'PGE.05.139',pontos:[7,25,3],
+  titulo:'Garantir a segurança patrimonial da Unidade',
+  desc:'Garantir a segurança de todas as áreas internas conforme checklist da Facilities, com mínimo de 70% de conformidade.',
+  reguas:['≥90% do checklist de segurança patrimonial','80–89,99%','70–79,99%'],
+  tips:['Inspecionar espaços conforme checklist da Facilities','Elaborar plano de ação (POP.05.001) para itens não atendidos','Garantir treinamento de segurança para colaboradores próprios e terceirizados']},
+ {id:9,cat:'processo',formato:'Checklist',periodicidade:'Semanal/quinzenal/mensal',ref:'PGE.04.216 / POP.04.229 / PGE.04.191 / POP.04.370',pontos:[8,66,4],
+  titulo:'Registro de chamados, rotinas preventivas e gestão do estoque de tecnologia',
+  desc:'Registrar todo suporte de TI no ServiceNow, manter equipamentos em bom estado (≥90% do checklist Field Service), zerar chamados fora do SLA e manter o estoque de TI cadastrado.',
+  reguas:['Atende todos os critérios (A a E)','Atende os critérios A, B e C','Atende apenas o critério A'],
+  tips:['Registrar todo atendimento de TI como chamado no ServiceNow','Manter ≥90% de aderência no Checklist Field Service - Ações Preventivas','Zerar chamados fora do SLA (exceto tratados por fornecedores externos)','Cumprir frequência de rondas: CPD e setorial 4x/semana; labs/salas 2x/quinzena; estoque de TI 1x/mês','Manter todos os ativos de TI cadastrados no app de gestão de estoque']},
+ {id:10,cat:'processo',formato:'Checklist',periodicidade:'Semestral',ref:'POP.05.002',pontos:[7,25,3],
+  titulo:'Atualizar o simulador de Recursos Pedagógicos',
+  desc:'Cadastrar e atualizar todos os espaços (laboratórios, labs de informática, salas) no Simulador de Recursos Pedagógicos, preenchendo todos os campos obrigatórios.',
+  reguas:['100% dos espaços cadastrados, completos, com fotos e 100% validados','100% cadastrado e validado, mas nem todas as fotos presentes','100% cadastrado, mas só 50% validado pelos avaliadores'],
+  tips:['Cadastrar focal na plataforma (nome, CPF, função, telefone, e-mail)','Preencher todos os espaços: laboratórios, clínicas, labs de informática e salas de aula','Atualizar sempre que houver mudança física no espaço']},
+ {id:11,cat:'resultado',formato:'Indicador',periodicidade:'Mensal',ref:'Data provider: Matheus Pimenta',pontos:[30,20,10],
+  titulo:'Realizar a gestão mensal do G&A',
+  desc:'Garantir o cumprimento do orçamento de G&A da unidade presencial + polo próprio (Infraestrutura, Informática/telecom, Imóveis, Adm., Assessorias, Viagens, Outras rec./desp.).',
+  reguas:['Cumpre orçamento com desvio abaixo de 10%','Cumpre orçamento com desvio entre 1% e 10%','Cumpre o orçamento do G&A'],
+  tips:['Acessar a Pivot PPO Operações Próprias, página DRE GDO','Filtrar CC NV1 - Operações Próprias e Tipo de Negócio - Unidade Presencial/Polo Próprio','Avaliar o G&A acumulado (YTD) vs. Orçado']},
+ {id:12,cat:'resultado',formato:'Indicador',periodicidade:'Mensal',ref:'Data provider: Matheus Pimenta',pontos:[40,30,20],
+  titulo:'Atingir receita orçada',
+  desc:'A unidade deve atingir a receita orçada (unidade presencial + polo próprio).',
+  reguas:['≥102,5% do orçamento','Entre 100% e 102,4%','Entre 95% e 99,9%'],
+  tips:['Acessar o Painel Jano, meta ROL - Atingir orçado Op. Própria','Comparar receita acumulada (YTD) vs. orçado','Pontua a partir de 95% do orçado']},
+ {id:13,cat:'resultado',formato:'Indicador',periodicidade:'Mensal',ref:'Data provider: Matheus Pimenta',pontos:[50,40,30],
+  titulo:'Atingir Margem Ebitda orçada',
+  desc:'A unidade deve atingir a margem Ebitda orçada (unidade presencial + polo próprio).',
+  reguas:['≥102,5% do orçamento','Entre 100% e 102,4%','Entre 95% e 99,9%'],
+  tips:['Acessar o Painel Jano, meta Margem Ebitda - Atingir orçado Op. Própria','Comparar margem Ebitda (YTD) vs. orçado','Pontua a partir de 95% do orçado']},
+ {id:14,cat:'resultado',formato:'Indicador',periodicidade:'Anual (acumulado)',ref:'POL.05.010 · Data provider: Adriano Borges',pontos:[10,27,4],
+  titulo:'Aderência à política de compras',
+  desc:'As requisições de compra (RC) devem estar em conformidade com a política vigente, limitando requisições do tipo Regularização.',
+  reguas:['Não possui RC de regularização','Possui até 1 RC de regularização','Possui até 2 RCs de regularização'],
+  tips:['Acessar o BI Acompanhamento Requisição do Tipo Regularização','Filtrar período (jan até o mês avaliado) e área de negócio','Aplicar e seguir a POL.05.010 - Política de Compras para evitar RCs de regularização']},
+ {id:15,cat:'resultado',formato:'Indicador',periodicidade:'Mensal (até dia 13)',ref:'POL.05.034 · Data provider: Adriano Borges',pontos:[5,0,0],
+  titulo:'Gerir prestação de contas do cartão de compras',
+  desc:'O pagamento do cartão de compras deve ser realizado dentro do prazo e conforme a política vigente, evitando reclassificações contábeis fora do período.',
+  reguas:['Não ter prestações de contas fora da competência','—','—'],
+  tips:['Acessar o Visa Spend Clarity e gerar o relatório de prestação de contas e aprovação','Filtrar por ano/mês e área de negócio','Garantir que nenhuma prestação de contas fique após o dia 13 de cada mês'],
+  prazoRecorrente:13},
+ {id:16,cat:'resultado',formato:'Indicador',periodicidade:'Mensal',ref:'Data provider: PEA',pontos:[10,27,4],
+  titulo:'Atingir a ocupação do Campus',
+  desc:'A unidade deve atingir o indicador de ocupação do campus conforme a média do seu cluster.',
+  reguas:['Maior em 5 p.p. da média do cluster','Maior ou igual à média','Menor em até 5 p.p. da média'],
+  tips:['Acessar o BI "Farol Turma" (Turmas - Farol de Ocupação)','Filtrar NOM_CAMPUS, período 26.1/26.2 e "Pico Sala"','Comparar % Ocupação Sala vs. % Ocupação Sala Cluster']},
+ {id:17,cat:'resultado',formato:'Indicador',periodicidade:'Mensal',ref:'Data provider: PEA',pontos:[5,23,2],
+  titulo:'Atingir a ocupação de sala',
+  desc:'A unidade deve atingir o indicador de ocupação das salas conforme a média do seu cluster.',
+  reguas:['Maior em 5 p.p. da média do cluster','Maior ou igual à média','Menor em até 5 p.p. da média'],
+  tips:['Acessar o BI "Farol Turma" (Turmas - Farol de Ocupação)','Filtrar NOM_CAMPUS, período 26.1/26.2 e "Pico Sala"','Comparar % Ocupação Sala vs. % Ocupação Sala Cluster']},
+]},
+];
+
+/* ---------------- Pontuação (cumulativa, conforme o book) ---------------- */
+function maxPts(it){
+  if(!it.pontos) return null;
+  return (it.pontos[0]||0)+(it.pontos[1]||0)+(it.pontos[2]||0);
+}
+function scoreFor(it, regua){
+  if(!it.pontos) return null;
+  const [p1,p2,p3] = it.pontos;
+  if(regua===1) return (p1||0)+(p2||0)+(p3||0);
+  if(regua===2) return (p2||0)+(p3||0);
+  if(regua===3) return (p3||0);
+  return 0;
+}
+
+let state = {}; // { "pillarKey-itemId": {regua, obs, plano, evidence_url, evidence_name, updated_by, open} }
+let currentPillar = 'atracao';
+let currentFilter = 'todos';
+let currentSearch = '';
+let currentUser = null;
+let currentUnidadeId = null;
+let unidades = [];
+
+async function loadUnidades(){
+  try{
+    const { data, error } = await supa.from('unidades').select('*').order('nome');
+    if(error) throw error;
+    unidades = data || [];
+  }catch(e){ console.error('Erro ao carregar unidades', e); unidades = []; }
+  const sel = document.getElementById('unidadeSelect');
+  sel.innerHTML = unidades.map(u=>`<option value="${u.id}">${u.nome}</option>`).join('');
+  const saved = localStorage.getItem('peg-unidade-id');
+  const validSaved = unidades.find(u=>u.id===saved);
+  currentUnidadeId = validSaved ? saved : (unidades[0] ? unidades[0].id : null);
+  if(currentUnidadeId) sel.value = currentUnidadeId;
+}
+document.getElementById('unidadeSelect').addEventListener('change', async (e)=>{
+  currentUnidadeId = e.target.value;
+  localStorage.setItem('peg-unidade-id', currentUnidadeId);
+  await loadState();
+});
+document.getElementById('novaUnidadeBtn').addEventListener('click', async ()=>{
+  const nome = prompt('Nome da nova unidade (ex: Estácio Cabo Frio):');
+  if(!nome) return;
+  const codigo = prompt('Código curto da unidade (ex: CFR):') || nome.slice(0,5).toUpperCase();
+  try{
+    const { data, error } = await supa.from('unidades').insert({ nome, codigo }).select().single();
+    if(error) throw error;
+    await loadUnidades();
+    currentUnidadeId = data.id;
+    document.getElementById('unidadeSelect').value = data.id;
+    localStorage.setItem('peg-unidade-id', data.id);
+    await loadState();
+  }catch(e){ alert('Erro ao criar unidade: ' + e.message); }
+});
+
+function skey(pk,id){ return pk+'-'+id; }
+function defaultItemState(){ return {regua:0, obs:'', plano:'', evidence_url:null, evidence_name:null, updated_by:null, open:false}; }
+function allItems(){ return PILLARS.flatMap(p=>p.items.map(it=>({...it, pk:p.key}))); }
+
+/* ---------------- Auth ---------------- */
+document.getElementById('loginBtn').addEventListener('click', doLogin);
+document.getElementById('loginPass').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+async function doLogin(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  const errEl = document.getElementById('loginErr');
+  errEl.textContent = '';
+  if(!supa){ errEl.textContent = 'Configuração do Supabase incompleta (veja SUPABASE_URL/ANON_KEY no código).'; return; }
+  const { data, error } = await supa.auth.signInWithPassword({ email, password: pass });
+  if(error){ errEl.textContent = 'Não foi possível entrar: ' + error.message; return; }
+  onLoggedIn(data.user);
+}
+document.getElementById('logoutBtn').addEventListener('click', async ()=>{
+  await supa.auth.signOut();
+  document.getElementById('appRoot').classList.add('hidden');
+  document.getElementById('loginScreen').classList.remove('hidden');
+});
+
+async function onLoggedIn(user){
+  currentUser = user;
+  document.getElementById('userChip').textContent = user.email;
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('appRoot').classList.remove('hidden');
+  await loadUnidades();
+  if(!currentUnidadeId){
+    console.warn('Nenhuma unidade cadastrada ainda — use o botão "+ Unidade".');
+    renderPillarTabs(); render();
+    return;
+  }
+  await loadState();
+}
+
+(async function initAuth(){
+  if(!supa) return;
+  const { data:{ session } } = await supa.auth.getSession();
+  if(session && session.user){ onLoggedIn(session.user); }
+})();
+
+/* ---------------- Data layer (Supabase) ---------------- */
+async function loadState(){
+  state = {};
+  allItems().forEach(it=>{ state[skey(it.pk,it.id)] = defaultItemState(); });
+  if(!currentUnidadeId){ renderPillarTabs(); render(); return; }
+  try{
+    const { data, error } = await supa.from('peg_items').select('*').eq('unidade_id', currentUnidadeId);
+    if(error) throw error;
+    (data||[]).forEach(row=>{
+      if(state[row.item_key]){
+        state[row.item_key].regua = row.regua||0;
+        state[row.item_key].obs = row.obs||'';
+        state[row.item_key].plano = row.plano||'';
+        state[row.item_key].evidence_url = row.evidence_url||null;
+        state[row.item_key].evidence_name = row.evidence_name||null;
+        state[row.item_key].updated_by = row.updated_by||null;
+      }
+    });
+  }catch(e){ console.error('Erro ao carregar dados do Supabase', e); }
+  renderPillarTabs();
+  render();
+}
+
+async function persist(k, fields){
+  if(!currentUnidadeId) return;
+  try{
+    await supa.from('peg_items').upsert({ unidade_id: currentUnidadeId, item_key:k, ...fields, updated_by: currentUser ? currentUser.email : null, updated_at: new Date().toISOString() }, { onConflict: 'unidade_id,item_key' });
+  }catch(e){ console.error('Erro ao salvar', e); }
+}
+
+async function uploadEvidence(k, file){
+  if(!currentUnidadeId) return;
+  const path = currentUnidadeId + '/' + k + '/' + Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+  const statusEl = document.querySelector('[data-upload-status="'+k+'"]');
+  if(statusEl) statusEl.textContent = 'Enviando...';
+  try{
+    const { error: upErr } = await supa.storage.from(EVIDENCE_BUCKET).upload(path, file, { upsert:true });
+    if(upErr) throw upErr;
+    const { data } = supa.storage.from(EVIDENCE_BUCKET).getPublicUrl(path);
+    state[k].evidence_url = data.publicUrl;
+    state[k].evidence_name = file.name;
+    await persist(k, { evidence_url: data.publicUrl, evidence_name: file.name });
+    render();
+  }catch(e){
+    console.error('Erro no upload', e);
+    if(statusEl) statusEl.textContent = 'Falha no upload: ' + e.message;
+  }
+}
+
+/* ---------------- Scoring / UI ---------------- */
+function pillarScore(p){
+  let earned=0, max=0, c0=0,c1=0,c2=0,c3=0;
+  p.items.forEach(it=>{
+    const s = state[skey(p.key,it.id)];
+    if(s.regua===0)c0++; else if(s.regua===1)c1++; else if(s.regua===2)c2++; else c3++;
+    if(it.pontos){ earned += scoreFor(it, s.regua)||0; max += maxPts(it); }
+  });
+  return {pct: max>0 ? Math.round(earned/max*100) : 0, earned, max, c0,c1,c2,c3};
+}
+
+function renderPillarTabs(){
+  const el = document.getElementById('pillarTabs');
+  el.innerHTML = PILLARS.map(p=>{
+    const sc = pillarScore(p);
+    const active = p.key===currentPillar ? ' active' : '';
+    return `<div class="pillar-tab${active}" data-pillar="${p.key}" style="--tab-color:${p.cor};--tab-color-dim:${p.cor}22;">
+      <span class="dot"></span>${p.nome} <span class="pct">${sc.pct}%</span>
+    </div>`;
+  }).join('');
+  el.querySelectorAll('.pillar-tab').forEach(t=>{
+    t.addEventListener('click', ()=>{ currentPillar = t.getAttribute('data-pillar'); renderPillarTabs(); render(); });
+  });
+}
+function currentPillarObj(){ return PILLARS.find(p=>p.key===currentPillar); }
+
+function updateSummary(){
+  const p = currentPillarObj();
+  const sc = pillarScore(p);
+  document.getElementById('cnt0').textContent = sc.c0;
+  document.getElementById('cnt1').textContent = sc.c1;
+  document.getElementById('cnt2').textContent = sc.c2;
+  document.getElementById('cnt3').textContent = sc.c3;
+  document.getElementById('gaugePct').textContent = sc.pct;
+  document.getElementById('gaugeLabel').textContent = sc.max>0 ? (sc.earned+' / '+sc.max+' pts') : 'Pontos do pilar';
+  const unidadeAtual = unidades.find(u=>u.id===currentUnidadeId);
+  document.getElementById('pillarTitle').textContent = p.nome + (unidadeAtual ? ' · ' + unidadeAtual.nome : '');
+  document.documentElement.style.setProperty('--pillar-color', p.cor);
+  const circumference = 169.6;
+  const offset = circumference - (circumference*sc.pct/100);
+  const circle = document.getElementById('gaugeCircle');
+  circle.style.strokeDashoffset = offset;
+  circle.setAttribute('stroke', p.cor);
+}
+
+function daysUntil(dateStr){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const target = new Date(dateStr+'T00:00:00');
+  return Math.round((target-today)/86400000);
+}
+function nextDay13(){
+  const today = new Date();
+  let candidate = new Date(today.getFullYear(), today.getMonth(), 13);
+  candidate.setHours(0,0,0,0);
+  const t = new Date(); t.setHours(0,0,0,0);
+  if(candidate < t){ candidate = new Date(today.getFullYear(), today.getMonth()+1, 13); }
+  return candidate;
+}
+function renderAlerts(){
+  const list = [];
+  PILLARS.forEach(p=>p.items.forEach(it=>{
+    if(it.prazos){ it.prazos.forEach(pr=>{ const d = daysUntil(pr.date); if(d >= -3) list.push({pillar:p, item:it, label:pr.label, days:d, dateStr:pr.date}); }); }
+    if(it.prazoRecorrente){ const nd = nextDay13(); const dateStr = nd.toISOString().slice(0,10); list.push({pillar:p, item:it, label:'Prazo mensal (dia '+it.prazoRecorrente+')', days:daysUntil(dateStr), dateStr}); }
+  }));
+  list.sort((a,b)=>a.days-b.days);
+  const el = document.getElementById('alertsList');
+  if(list.length===0){ el.innerHTML = '<div style="color:var(--muted-2);font-size:13px;">Nenhum prazo fixo cadastrado.</div>'; return; }
+  el.innerHTML = list.slice(0,12).map(a=>{
+    const cls = a.days<=15 ? 'soon' : a.days<=45 ? 'mid' : 'far';
+    const dLabel = a.days<0 ? 'atrasado' : a.days===0 ? 'hoje' : a.days+'d';
+    const [y,m,dd] = a.dateStr.split('-');
+    return `<div class="alert-item"><span><span class="alert-pillar">[${a.pillar.nome}]</span><b class="mono" style="color:var(--muted);">#${a.item.id}</b> &nbsp;${a.item.titulo} — <span style="color:var(--muted);">${a.label} (${dd}/${m})</span></span><span class="alert-days ${cls}">${dLabel}</span></div>`;
+  }).join('');
+}
+
+function matchesFilter(it){
+  const s = state[skey(currentPillar,it.id)];
+  if(currentFilter==='processo' && it.cat!=='processo') return false;
+  if(currentFilter==='resultado' && it.cat!=='resultado') return false;
+  if(currentFilter==='pendencia' && s.regua===1) return false;
+  if(currentFilter==='semevidencia' && s.evidence_url) return false;
+  if(currentSearch && !it.titulo.toLowerCase().includes(currentSearch.toLowerCase())) return false;
+  return true;
+}
+
+function render(){
+  renderPillarTabs();
+  updateSummary();
+  renderAlerts();
+  const p = currentPillarObj();
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  p.items.filter(matchesFilter).forEach(it=>{
+    const k = skey(p.key,it.id);
+    const s = state[k];
+    const card = document.createElement('div');
+    card.className = 'card' + (s.open ? ' open' : '');
+
+    const rulerSegs = ['0','3','2','1'].map(lvl=>{
+      const labelMap = {0:'Não aval.',3:'Régua 3',2:'Régua 2',1:'Régua 1'};
+      const sel = (String(s.regua)===lvl) ? ' sel-'+lvl : '';
+      const pv = (lvl!=='0' && it.pontos) ? `<span class="pv">${scoreFor(it, parseInt(lvl))} pts</span>` : '';
+      return `<div class="ruler-seg${sel}" data-lvl="${lvl}">${labelMap[lvl]}${pv}</div>`;
+    }).join('');
+
+    const reguaBoxes = ['r1','r2','r3'].map((cls,i)=>{
+      const pv = it.pontos ? `<span>${it.pontos[i]!=null?it.pontos[i]:'—'} pts</span>` : '';
+      return `<div class="regua-box ${cls}"><div class="rlabel"><span>RÉGUA ${i+1}</span>${pv}</div><div>${it.reguas[i]}</div></div>`;
+    }).join('');
+
+    const tipsHtml = it.tips.map(t=>`<li>${t}</li>`).join('');
+    const curScore = it.pontos ? scoreFor(it, s.regua) : null;
+    const maxScore = it.pontos ? maxPts(it) : null;
+    const ptsTag = it.pontos ? `<span class="tag pts">${curScore}/${maxScore} pts</span>` : '';
+
+    const evidenceHtml = s.evidence_url ? `
+      <div class="evidence-box has-file">
+        <div class="evidence-preview">
+          <img class="evidence-thumb" src="${s.evidence_url}" onerror="this.style.display='none'">
+          <div class="evidence-info">
+            <a href="${s.evidence_url}" target="_blank" rel="noopener">${s.evidence_name || 'Ver evidência'}</a>
+            <div class="evidence-meta">${s.updated_by ? 'Enviado por '+s.updated_by : ''}</div>
+          </div>
+          <div class="evidence-actions">
+            <label class="btn-mini">Trocar<input type="file" accept="image/*,.pdf" data-evidence="${k}" style="display:none;"></label>
+            <button class="btn-mini danger" data-remove-evidence="${k}">Remover</button>
+          </div>
+        </div>
+      </div>` : `
+      <div class="evidence-box">
+        <label class="file-input-label">📎 Anexar evidência (imagem ou PDF)<input type="file" accept="image/*,.pdf" data-evidence="${k}"></label>
+        <div class="upload-status" data-upload-status="${k}"></div>
+      </div>`;
+
+    card.innerHTML = `
+      <div class="card-head" data-toggle="${k}">
+        <div class="num-badge mono">${it.id}</div>
+        <div class="card-titles">
+          <div class="card-title">${it.titulo}</div>
+          <div class="tag-row">
+            <span class="tag ${it.cat==='processo'?'cat-proc':'cat-res'}">${it.cat==='processo'?'Processo':'Resultado'}</span>
+            <span class="tag">${it.formato}</span>
+            <span class="tag">${it.periodicidade}</span>
+            ${ptsTag}
+            ${s.evidence_url ? '<span class="tag" style="color:var(--teal);border-color:var(--teal);">📎 evidência</span>' : ''}
+          </div>
+        </div>
+        <svg class="chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="ruler-wrap"><div class="ruler" data-ruler="${k}">${rulerSegs}</div></div>
+      <div class="details">
+        <div class="detail-block"><div class="detail-label">Descrição do item</div><div class="detail-text">${it.desc}</div></div>
+        <div class="detail-block"><div class="detail-label">Réguas e pontuação do book</div><div class="regua-grid">${reguaBoxes}</div></div>
+        <div class="detail-block"><div class="detail-label">Como fazer</div><ul class="tips">${tipsHtml}</ul></div>
+        <div class="detail-block"><div class="detail-label">Evidência</div>${evidenceHtml}</div>
+        <div class="detail-block"><div class="detail-label">Observações</div><textarea data-obs="${k}" placeholder="Anotações, pendências, responsável...">${s.obs}</textarea></div>
+        <div class="detail-block"><div class="detail-label">Plano de ação (POP.05.001)</div><textarea data-plano="${k}" placeholder="Ação / Responsável / Prazo...">${s.plano}</textarea></div>
+        <div class="meta-row">
+          <span><b>Referência:</b> ${it.ref}</span>
+          ${it.pontos ? `<span><b>Sua pontuação:</b> <span class="score-badge">${curScore} / ${maxScore} pts</span></span>` : `<span style="color:var(--muted-2);">Pontuação não localizada no book para este item</span>`}
+          ${s.updated_by ? `<span><b>Última edição:</b> ${s.updated_by}</span>` : ''}
+        </div>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+
+  grid.querySelectorAll('[data-toggle]').forEach(el=>{
+    el.addEventListener('click', ()=>{ const k = el.getAttribute('data-toggle'); state[k].open = !state[k].open; render(); });
+  });
+  grid.querySelectorAll('.ruler-seg').forEach(el=>{
+    el.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const k = el.closest('[data-ruler]').getAttribute('data-ruler');
+      state[k].regua = parseInt(el.getAttribute('data-lvl'));
+      persist(k, { regua: state[k].regua });
+      render();
+    });
+  });
+  grid.querySelectorAll('[data-obs]').forEach(el=>{
+    el.addEventListener('click', e=>e.stopPropagation());
+    el.addEventListener('change', ()=>{ state[el.getAttribute('data-obs')].obs = el.value; persist(el.getAttribute('data-obs'), {obs: el.value}); });
+  });
+  grid.querySelectorAll('[data-plano]').forEach(el=>{
+    el.addEventListener('click', e=>e.stopPropagation());
+    el.addEventListener('change', ()=>{ state[el.getAttribute('data-plano')].plano = el.value; persist(el.getAttribute('data-plano'), {plano: el.value}); });
+  });
+  grid.querySelectorAll('[data-evidence]').forEach(el=>{
+    el.addEventListener('click', e=>e.stopPropagation());
+    el.addEventListener('change', (e)=>{
+      const file = e.target.files[0];
+      if(file) uploadEvidence(el.getAttribute('data-evidence'), file);
+    });
+  });
+  grid.querySelectorAll('[data-remove-evidence]').forEach(el=>{
+    el.addEventListener('click', async (e)=>{
+      e.stopPropagation();
+      const k = el.getAttribute('data-remove-evidence');
+      state[k].evidence_url = null; state[k].evidence_name = null;
+      await persist(k, { evidence_url:null, evidence_name:null });
+      render();
+    });
+  });
+}
+
+document.getElementById('catTabs').addEventListener('click', (e)=>{
+  const tab = e.target.closest('.tab');
+  if(!tab) return;
+  document.querySelectorAll('#catTabs .tab').forEach(t=>t.classList.remove('active'));
+  tab.classList.add('active');
+  currentFilter = tab.getAttribute('data-f');
+  render();
+});
+document.getElementById('search').addEventListener('input', (e)=>{ currentSearch = e.target.value; render(); });
+</script>
+</body>
+</html>
